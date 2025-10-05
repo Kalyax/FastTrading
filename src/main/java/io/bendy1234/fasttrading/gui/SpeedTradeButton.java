@@ -11,6 +11,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.PressableWidget;
+import net.minecraft.client.input.AbstractInput;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
@@ -43,14 +44,13 @@ public class SpeedTradeButton extends PressableWidget {
         return active;
     }
 
-    @Override
-    public void onPress() {
-        if (checkPrimed()) {
-            phase = Phase.AUTOFILL;
-            SpeedTradeTimer.start();
-        }
-    }
-
+	@Override
+	public void onPress(AbstractInput input) {
+		if (checkPrimed()) {
+			phase = Phase.AUTOFILL;
+			SpeedTradeTimer.start();
+		}
+	}
     private boolean checkState() {
         if (hooks.fasttrading$computeState() != MerchantScreenHooks.State.CAN_PERFORM) {
             phase = Phase.INACTIVE;
@@ -128,7 +128,7 @@ public class SpeedTradeButton extends PressableWidget {
                     ).asOrderedText());
                     if (keyOverrideBlock.isUnbound()) {
                         textList.add(Text.translatable("fasttrading.tooltip.unblock_hint.unbound[0]",
-                                        Texts.bracketed(Text.translatable(keyOverrideBlock.getTranslationKey())
+                                        Texts.bracketed(Text.translatable(keyOverrideBlock.getBoundKeyTranslationKey())
                                                 .styled(style -> style.withBold(true).withColor(Formatting.WHITE))))
                                 .styled(style -> style.withColor(Formatting.GRAY)).asOrderedText());
                         textList.add(Text.translatable("fasttrading.tooltip.unblock_hint.unbound[1]")

@@ -4,6 +4,7 @@ import io.bendy1234.fasttrading.ModKeyBindings;
 import net.minecraft.client.Keyboard;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.option.KeyBinding;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,7 +22,7 @@ public abstract class KeyboardMixin {
     private MinecraftClient client;
 
     @Inject(method = "onKey", at = @At(value = "HEAD"))
-    public void updateModKeys(long window, int key, int scancode, int action, int mods, CallbackInfo ci) {
+    public void updateModKeys(long window, int action, KeyInput input, CallbackInfo ci) {
         // this forces our key bindings to be updated in screens
         // this allows scancodes to work properly, since you can't poll them via GLFW
         if (client.currentScreen != null && client.getWindow().getHandle() == window) {
@@ -34,7 +35,7 @@ public abstract class KeyboardMixin {
 
             KeyBinding targetBinding = null;
             for (KeyBinding keyBinding : ModKeyBindings.all) {
-                if (keyBinding.matchesKey(key, scancode)) {
+                if (keyBinding.matchesKey(input)) {
                     targetBinding = keyBinding;
                     break;
                 }

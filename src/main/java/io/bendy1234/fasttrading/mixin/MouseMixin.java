@@ -3,8 +3,10 @@ package io.bendy1234.fasttrading.mixin;
 import io.bendy1234.fasttrading.ModKeyBindings;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.client.input.MouseInput;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.screen.slot.Slot;
 import org.spongepowered.asm.mixin.Final;
@@ -27,7 +29,7 @@ public abstract class MouseMixin {
     private double y;
 
     @Inject(method = "onMouseButton", at = @At("HEAD"))
-    public void updateModKeys(long window, int button, int action, int mods, CallbackInfo ci) {
+    public void updateModKeys(long window, MouseInput input, int action, CallbackInfo ci) {
         // this forces our key bindings to be updated in screens
         if (client.currentScreen != null && client.getWindow().getHandle() == window) {
             if (client.currentScreen instanceof HandledScreenAccessor handledScreen) {
@@ -45,8 +47,9 @@ public abstract class MouseMixin {
             }
 
             KeyBinding targetBinding = null;
+			final Click click = new Click(0, 0, input);
             for (KeyBinding keyBinding : ModKeyBindings.all) {
-                if (keyBinding.matchesMouse(button)) {
+                if (keyBinding.matchesMouse(click)) {
                     targetBinding = keyBinding;
                     break;
                 }

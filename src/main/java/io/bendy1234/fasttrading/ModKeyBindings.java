@@ -7,7 +7,7 @@ import static net.minecraft.client.util.InputUtil.GLFW_KEY_LEFT_ALT;
 
 public class ModKeyBindings {
     public static final KeyBinding keyOverrideBlock = new KeyBinding("key.fasttrading.overrideBlock",
-            GLFW_KEY_LEFT_ALT, KeyBinding.INVENTORY_CATEGORY);
+            GLFW_KEY_LEFT_ALT, KeyBinding.Category.INVENTORY);
     public static final KeyBinding[] all = new KeyBinding[]{keyOverrideBlock};
 
     private ModKeyBindings() {
