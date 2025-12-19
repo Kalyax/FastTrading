@@ -87,7 +87,7 @@ public class SpeedTradeButton extends PressableWidget {
     }
 
     @Override
-    public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void drawIcon(DrawContext context, int mouseX, int mouseY, float delta) {
         int v = 36;
         if (checkPrimed()) {
             v = isHovered() ? 18 : 0;
