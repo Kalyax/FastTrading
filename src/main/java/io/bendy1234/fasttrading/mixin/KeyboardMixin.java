@@ -1,11 +1,11 @@
 package io.bendy1234.fasttrading.mixin;
 
 import io.bendy1234.fasttrading.ModKeyBindings;
-import net.minecraft.client.Keyboard;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.KeyboardHandler;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.KeyEvent;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -15,27 +15,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
-@Mixin(Keyboard.class)
+@Mixin(KeyboardHandler.class)
 public abstract class KeyboardMixin {
     @Shadow
     @Final
-    private MinecraftClient client;
+    private Minecraft minecraft;
 
-    @Inject(method = "onKey", at = @At(value = "HEAD"))
-    public void updateModKeys(long window, int action, KeyInput input, CallbackInfo ci) {
+    @Inject(method = "keyPress", at = @At(value = "HEAD"))
+    public void updateModKeys(long window, int action, KeyEvent input, CallbackInfo ci) {
         // this forces our key bindings to be updated in screens
         // this allows scancodes to work properly, since you can't poll them via GLFW
-        if (client.currentScreen != null && client.getWindow().getHandle() == window) {
-            if (client.currentScreen.getFocused() instanceof TextFieldWidget textFieldWidget) {
-                if (textFieldWidget.isActive()) {
+        if (minecraft.screen != null && minecraft.getWindow().handle() == window) {
+            if (minecraft.screen.getFocused() instanceof EditBox textFieldWidget) {
+                if (textFieldWidget.canConsumeInput()) {
                     // a text field widget is active, don't update keys!
                     return;
                 }
             }
 
-            KeyBinding targetBinding = null;
-            for (KeyBinding keyBinding : ModKeyBindings.all) {
-                if (keyBinding.matchesKey(input)) {
+            KeyMapping targetBinding = null;
+            for (KeyMapping keyBinding : ModKeyBindings.all) {
+                if (keyBinding.matches(input)) {
                     targetBinding = keyBinding;
                     break;
                 }
@@ -43,10 +43,10 @@ public abstract class KeyboardMixin {
             if (targetBinding == null)
                 return;
             if (action == GLFW_RELEASE)
-                targetBinding.setPressed(false);
+                targetBinding.setDown(false);
             else {
-                targetBinding.setPressed(true);
-                ((KeyBindingAccessor) targetBinding).setTimesPressed(((KeyBindingAccessor) targetBinding).getTimesPressed() + 1);
+                targetBinding.setDown(true);
+                ((KeyBindingAccessor) targetBinding).setClickCount(((KeyBindingAccessor) targetBinding).getClickCount() + 1);
             }
         }
     }

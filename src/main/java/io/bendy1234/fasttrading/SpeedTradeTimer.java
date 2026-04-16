@@ -1,7 +1,7 @@
 package io.bendy1234.fasttrading;
 
 import io.bendy1234.fasttrading.config.ModConfig;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.multiplayer.ClientLevel;
 
 public class SpeedTradeTimer {
     private static boolean active;
@@ -24,7 +24,7 @@ public class SpeedTradeTimer {
         counter--;
     }
 
-    public static void onClientWorldTick(ClientWorld world) {
+    public static void onClientWorldTick(ClientLevel world) {
         if (active)
             counter += 1 / ModConfig.ticksBetweenActions;
     }

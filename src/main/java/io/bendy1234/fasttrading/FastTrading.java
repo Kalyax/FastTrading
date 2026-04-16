@@ -4,7 +4,7 @@ import eu.midnightdust.lib.config.MidnightConfig;
 import io.bendy1234.fasttrading.config.ModConfig;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,7 +15,7 @@ public class FastTrading implements ClientModInitializer {
     public static final Logger LOGGER = LogManager.getLogger(MOD_NAME);
 
     public static Identifier id(String path) {
-        return Identifier.of(MOD_ID, path);
+        return Identifier.fromNamespaceAndPath(MOD_ID, path);
     }
 
     @Override

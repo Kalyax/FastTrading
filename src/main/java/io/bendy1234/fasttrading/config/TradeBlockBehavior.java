@@ -1,13 +1,13 @@
 package io.bendy1234.fasttrading.config;
 
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 public enum TradeBlockBehavior {
     DAMAGEABLE, UNSTACKABLE, DISABLED;
 
     public boolean isBlocked(ItemStack stack) {
         return switch (this) {
-            case DAMAGEABLE -> stack.isDamageable();
+            case DAMAGEABLE -> stack.isDamageableItem();
             case UNSTACKABLE -> !stack.isStackable();
             case DISABLED -> false;
         };

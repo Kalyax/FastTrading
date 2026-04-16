@@ -1,14 +1,14 @@
 package io.bendy1234.fasttrading.mixin;
 
 import io.bendy1234.fasttrading.ModKeyBindings;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.Mouse;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.input.MouseInput;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.MouseHandler;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.world.inventory.Slot;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -18,37 +18,37 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
-@Mixin(Mouse.class)
+@Mixin(MouseHandler.class)
 public abstract class MouseMixin {
     @Shadow
     @Final
-    private MinecraftClient client;
+    private Minecraft minecraft;
     @Shadow
-    private double x;
+    private double xpos;
     @Shadow
-    private double y;
+    private double ypos;
 
-    @Inject(method = "onMouseButton", at = @At("HEAD"))
-    public void updateModKeys(long window, MouseInput input, int action, CallbackInfo ci) {
+    @Inject(method = "onButton", at = @At("HEAD"))
+    public void updateModKeys(long window, MouseButtonInfo input, int action, CallbackInfo ci) {
         // this forces our key bindings to be updated in screens
-        if (client.currentScreen != null && client.getWindow().getHandle() == window) {
-            if (client.currentScreen instanceof HandledScreenAccessor handledScreen) {
-                Slot focusedSlot = handledScreen.callGetSlotAt(x, y);
+        if (minecraft.screen != null && minecraft.getWindow().handle() == window) {
+            if (minecraft.screen instanceof HandledScreenAccessor handledScreen) {
+                Slot focusedSlot = handledScreen.callGetHoveredSlot(xpos, ypos);
                 if (focusedSlot != null) {
                     // mouse is over a slot, don't update keys!
                     return;
                 }
             } else {
-                Element hoveredElement = client.currentScreen.hoveredElement(x, y).orElse(null);
-                if (hoveredElement instanceof ClickableWidget) {
+                GuiEventListener hoveredElement = minecraft.screen.getChildAt(xpos, ypos).orElse(null);
+                if (hoveredElement instanceof AbstractWidget) {
                     // mouse is over something clickable, don't update keys!
                     return;
                 }
             }
 
-            KeyBinding targetBinding = null;
-			final Click click = new Click(0, 0, input);
-            for (KeyBinding keyBinding : ModKeyBindings.all) {
+            KeyMapping targetBinding = null;
+			final MouseButtonEvent click = new MouseButtonEvent(0, 0, input);
+            for (KeyMapping keyBinding : ModKeyBindings.all) {
                 if (keyBinding.matchesMouse(click)) {
                     targetBinding = keyBinding;
                     break;
@@ -57,10 +57,10 @@ public abstract class MouseMixin {
             if (targetBinding == null)
                 return;
             if (action == GLFW_RELEASE)
-                targetBinding.setPressed(false);
+                targetBinding.setDown(false);
             else {
-                targetBinding.setPressed(true);
-                ((KeyBindingAccessor) targetBinding).setTimesPressed(((KeyBindingAccessor) targetBinding).getTimesPressed() + 1);
+                targetBinding.setDown(true);
+                ((KeyBindingAccessor) targetBinding).setClickCount(((KeyBindingAccessor) targetBinding).getClickCount() + 1);
             }
         }
     }

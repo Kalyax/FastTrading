@@ -3,16 +3,16 @@ package io.bendy1234.fasttrading.mixin;
 import io.bendy1234.fasttrading.config.ModConfig;
 import io.bendy1234.fasttrading.duck.MerchantScreenHooks;
 import io.bendy1234.fasttrading.gui.SpeedTradeButton;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.MerchantScreen;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.MerchantScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.Text;
-import net.minecraft.village.TradeOffer;
-import net.minecraft.village.TradeOfferList;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.MerchantScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.MerchantMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.world.item.trading.MerchantOffers;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -24,11 +24,11 @@ import static io.bendy1234.fasttrading.util.PlayerInventoryUtil.playerCanAcceptS
 import static io.bendy1234.fasttrading.util.PlayerInventoryUtil.playerCanPerformTrade;
 
 @Mixin(MerchantScreen.class)
-public abstract class MerchantScreenMixin extends HandledScreen<MerchantScreenHandler> implements MerchantScreenHooks {
+public abstract class MerchantScreenMixin extends AbstractContainerScreen<MerchantMenu> implements MerchantScreenHooks {
     @Shadow
-    private int selectedIndex;
+    private int shopItem;
     @Unique
-    private PlayerInventory playerInventory;
+    private Inventory playerInventory;
     @Unique
     private SpeedTradeButton speedTradeButton;
 
@@ -39,62 +39,62 @@ public abstract class MerchantScreenMixin extends HandledScreen<MerchantScreenHa
     }
 
     @Shadow
-    protected abstract void syncRecipeIndex();
+    protected abstract void postButtonClick();
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    public void capturePlayerInventory(MerchantScreenHandler handler, PlayerInventory inventory, Text title, CallbackInfo ci) {
+    public void capturePlayerInventory(MerchantMenu handler, Inventory inventory, Component title, CallbackInfo ci) {
         this.playerInventory = inventory;
     }
 
     @Inject(method = "init", at = @At("TAIL"))
     public void addSpeedTradeButton(CallbackInfo ci) {
-        addDrawableChild(speedTradeButton = new SpeedTradeButton(x + 247, y + 36, this));
+        addRenderableWidget(speedTradeButton = new SpeedTradeButton(leftPos + 247, topPos + 36, this));
     }
 
     @Override
     public MerchantScreenHooks.State fasttrading$computeState() {
-        if (client == null || client.currentScreen != this)
+        if (minecraft == null || minecraft.screen != this)
             return State.CLOSED;
-        TradeOffer offer = fasttrading$getCurrentTradeOffer();
+        MerchantOffer offer = fasttrading$getCurrentTradeOffer();
         if (offer == null)
             return State.NO_SELECTION;
-        if (offer.isDisabled())
+        if (offer.isOutOfStock())
             return State.OUT_OF_STOCK;
-        ItemStack sellItem = offer.getSellItem();
+        ItemStack sellItem = offer.getResult();
         if (!playerCanAcceptStack(playerInventory, sellItem))
             return State.NO_ROOM_FOR_SELL_ITEM;
-        if (handler.getSlot(2).hasStack() || playerCanPerformTrade(playerInventory, offer))
+        if (menu.getSlot(2).hasItem() || playerCanPerformTrade(playerInventory, offer))
             return State.CAN_PERFORM;
         return State.NOT_ENOUGH_BUY_ITEMS;
     }
 
     @Override
-    public TradeOffer fasttrading$getCurrentTradeOffer() {
-        TradeOfferList tradeOffers = handler.getRecipes();
-        if (selectedIndex < 0 || selectedIndex >= tradeOffers.size())
+    public MerchantOffer fasttrading$getCurrentTradeOffer() {
+        MerchantOffers tradeOffers = menu.getOffers();
+        if (shopItem < 0 || shopItem >= tradeOffers.size())
             return null;
-        return tradeOffers.get(selectedIndex);
+        return tradeOffers.get(shopItem);
     }
 
     @Override
     public boolean fasttrading$isCurrentTradeOfferBlocked() {
-        TradeOffer offer = fasttrading$getCurrentTradeOffer();
+        MerchantOffer offer = fasttrading$getCurrentTradeOffer();
         if (offer == null)
             return false;
-        return ModConfig.tradeBlockBehavior.isBlocked(offer.getSellItem());
+        return ModConfig.tradeBlockBehavior.isBlocked(offer.getResult());
     }
 
     @Override
     public void fasttrading$autofillSellSlots() {
         switch (ModConfig.autofillBehavior) {
-            case DEFAULT -> syncRecipeIndex();
+            case DEFAULT -> postButtonClick();
             case STRICT -> {
                 fasttrading$clearSellSlots();
-                TradeOffer recipe = handler.getRecipes().get(selectedIndex);
+                MerchantOffer recipe = menu.getOffers().get(shopItem);
 
-                fillSlot(0, recipe.getFirstBuyItem().itemStack());
-                if (recipe.getSecondBuyItem().isPresent()) {
-                    fillSlot(1, recipe.getSecondBuyItem().get().itemStack());
+                fillSlot(0, recipe.getItemCostA().itemStack());
+                if (recipe.getItemCostB().isPresent()) {
+                    fillSlot(1, recipe.getItemCostB().get().itemStack());
                 }
             }
         }
@@ -102,20 +102,20 @@ public abstract class MerchantScreenMixin extends HandledScreen<MerchantScreenHa
 
     @Override
     public void fasttrading$performTrade() {
-        Slot resultSlot = handler.getSlot(2);
-        if (!resultSlot.getStack().isEmpty())
-            onMouseClick(resultSlot, -1, 0, SlotActionType.QUICK_MOVE);
+        Slot resultSlot = menu.getSlot(2);
+        if (!resultSlot.getItem().isEmpty())
+            slotClicked(resultSlot, -1, 0, ClickType.QUICK_MOVE);
     }
 
     @Override
     public void fasttrading$clearSellSlots() {
-        onMouseClick(null, 0, 0, SlotActionType.QUICK_MOVE);
-        onMouseClick(null, 1, 0, SlotActionType.QUICK_MOVE);
+        slotClicked(null, 0, 0, ClickType.QUICK_MOVE);
+        slotClicked(null, 1, 0, ClickType.QUICK_MOVE);
     }
 
     @Override
-    protected void handledScreenTick() {
-        super.handledScreenTick();
+    protected void containerTick() {
+        super.containerTick();
         speedTradeButton.tick();
     }
 
@@ -123,20 +123,20 @@ public abstract class MerchantScreenMixin extends HandledScreen<MerchantScreenHa
     private void fillSlot(int slot, ItemStack item) {
         int count = 0;
         for (int i = 3; i < 39; i++) {
-            ItemStack invstack = handler.getSlot(i).getStack();
-            if (!ItemStack.areItemsAndComponentsEqual(item, invstack)) {
+            ItemStack invstack = menu.getSlot(i).getItem();
+            if (!ItemStack.isSameItemSameComponents(item, invstack)) {
                 continue;
             }
 
             count += invstack.getCount();
 
-            this.onMouseClick(null, i, 0, SlotActionType.PICKUP);
-            this.onMouseClick(null, slot, 0, SlotActionType.PICKUP);
+            this.slotClicked(null, i, 0, ClickType.PICKUP);
+            this.slotClicked(null, slot, 0, ClickType.PICKUP);
 
-            if (count > handler.getSlot(slot).getStack().getMaxCount()) { // items still on the cursor
-                this.onMouseClick(null, i, 0, SlotActionType.PICKUP);
+            if (count > menu.getSlot(slot).getItem().getMaxStackSize()) { // items still on the cursor
+                this.slotClicked(null, i, 0, ClickType.PICKUP);
                 return;
-            } else if (count == handler.getSlot(slot).getStack().getMaxCount()) {
+            } else if (count == menu.getSlot(slot).getItem().getMaxStackSize()) {
                 return;
             }
         }

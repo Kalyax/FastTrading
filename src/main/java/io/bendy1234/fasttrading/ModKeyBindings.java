@@ -1,27 +1,27 @@
 package io.bendy1234.fasttrading;
 
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.KeyMapping;
 
-import static net.minecraft.client.util.InputUtil.GLFW_KEY_LEFT_ALT;
+import static com.mojang.blaze3d.platform.InputConstants.KEY_LALT;
 
 public class ModKeyBindings {
-    public static final KeyBinding keyOverrideBlock = new KeyBinding("key.fasttrading.overrideBlock",
-            GLFW_KEY_LEFT_ALT, KeyBinding.Category.INVENTORY);
-    public static final KeyBinding[] all = new KeyBinding[]{keyOverrideBlock};
+    public static final KeyMapping keyOverrideBlock = new KeyMapping("key.fasttrading.overrideBlock",
+            KEY_LALT, KeyMapping.Category.INVENTORY);
+    public static final KeyMapping[] all = new KeyMapping[]{keyOverrideBlock};
 
     private ModKeyBindings() {
     }
 
     public static void register() {
-        for (KeyBinding keyBinding : all) {
+        for (KeyMapping keyBinding : all) {
             KeyBindingHelper.registerKeyBinding(keyBinding);
         }
     }
 
-    public static boolean isDown(KeyBinding keyBinding) {
+    public static boolean isDown(KeyMapping keyBinding) {
         if (keyBinding.isUnbound())
             return false;
-        return keyBinding.isPressed();
+        return keyBinding.isDown();
     }
 }

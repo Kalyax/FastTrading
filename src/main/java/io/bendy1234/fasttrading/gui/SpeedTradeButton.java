@@ -4,35 +4,39 @@ import io.bendy1234.fasttrading.FastTrading;
 import io.bendy1234.fasttrading.ModKeyBindings;
 import io.bendy1234.fasttrading.SpeedTradeTimer;
 import io.bendy1234.fasttrading.duck.MerchantScreenHooks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.PressableWidget;
-import net.minecraft.client.input.AbstractInput;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.*;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Language;
-import net.minecraft.village.TradeOffer;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractButton;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.InputWithModifiers;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.Identifier;
+//import net.minecraft.text.*;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.trading.MerchantOffer;
 import java.util.ArrayList;
 import java.util.Locale;
 
 import static io.bendy1234.fasttrading.ModKeyBindings.keyOverrideBlock;
 
-public class SpeedTradeButton extends PressableWidget {
+public class SpeedTradeButton extends AbstractButton {
 
     private static final Identifier BUTTON_LOCATION = FastTrading.id("textures/gui/fasttrading.png");
-    private static final Style STYLE_GRAY = Style.EMPTY.withColor(Formatting.GRAY);
+    private static final Style STYLE_GRAY = Style.EMPTY.withColor(ChatFormatting.GRAY);
     private final MerchantScreenHooks hooks;
     private Phase phase;
 
     public SpeedTradeButton(int x, int y, MerchantScreenHooks hooks) {
-        super(x, y, 18, 20, Text.empty());
+        super(x, y, 18, 20, Component.empty());
         this.hooks = hooks;
         phase = Phase.INACTIVE;
     }
@@ -45,7 +49,7 @@ public class SpeedTradeButton extends PressableWidget {
     }
 
 	@Override
-	public void onPress(AbstractInput input) {
+	public void onPress(InputWithModifiers input) {
 		if (checkPrimed()) {
 			phase = Phase.AUTOFILL;
 			SpeedTradeTimer.start();
@@ -87,125 +91,125 @@ public class SpeedTradeButton extends PressableWidget {
     }
 
     @Override
-    public void drawIcon(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void renderContents(GuiGraphics context, int mouseX, int mouseY, float delta) {
         int v = 36;
         if (checkPrimed()) {
             v = isHovered() ? 18 : 0;
         }
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, BUTTON_LOCATION, getX(), getY(), 0, v, 20, 18, 20, 54);
+        context.blit(RenderPipelines.GUI_TEXTURED, BUTTON_LOCATION, getX(), getY(), 0, v, 20, 18, 20, 54);
         applyTooltip();
     }
 
     @Override
-    protected void appendClickableNarrations(NarrationMessageBuilder builder) {
+    protected void updateWidgetNarration(NarrationElementOutput builder) {
     }
 
     protected void applyTooltip() {
         if (!isHovered())
             return;
 
-        Screen screen = MinecraftClient.getInstance().currentScreen;
+        Screen screen = Minecraft.getInstance().screen;
         if (screen == null) {
             return;
         }
 
-        ArrayList<OrderedText> textList = new ArrayList<>();
+        ArrayList<FormattedCharSequence> textList = new ArrayList<>();
         if (phase != Phase.INACTIVE) {
-            textList.add(Text.translatable("fasttrading.tooltip.in_progress").styled(
-                    style -> style.withFormatting(Formatting.BOLD, Formatting.ITALIC, Formatting.DARK_GREEN)
-            ).asOrderedText());
+            textList.add(Component.translatable("fasttrading.tooltip.in_progress").withStyle(
+                    style -> style.applyFormats(ChatFormatting.BOLD, ChatFormatting.ITALIC, ChatFormatting.DARK_GREEN)
+            ).getVisualOrderText());
         } else {
             MerchantScreenHooks.State state = hooks.fasttrading$computeState();
             if (state == MerchantScreenHooks.State.CAN_PERFORM) {
                 boolean isBlocked = hooks.fasttrading$isCurrentTradeOfferBlocked();
                 boolean isOverriden = ModKeyBindings.isDown(keyOverrideBlock);
                 if (isBlocked && !isOverriden) {
-                    textList.add(Text.translatable("fasttrading.tooltip.cannot_perform").styled(
-                            style -> style.withFormatting(Formatting.BOLD, Formatting.RED)
-                    ).asOrderedText());
-                    textList.add(Text.translatable("fasttrading.tooltip.blocked").styled(
-                            style -> style.withFormatting(Formatting.ITALIC, Formatting.GRAY)
-                    ).asOrderedText());
+                    textList.add(Component.translatable("fasttrading.tooltip.cannot_perform").withStyle(
+                            style -> style.applyFormats(ChatFormatting.BOLD, ChatFormatting.RED)
+                    ).getVisualOrderText());
+                    textList.add(Component.translatable("fasttrading.tooltip.blocked").withStyle(
+                            style -> style.applyFormats(ChatFormatting.ITALIC, ChatFormatting.GRAY)
+                    ).getVisualOrderText());
                     if (keyOverrideBlock.isUnbound()) {
-                        textList.add(Text.translatable("fasttrading.tooltip.unblock_hint.unbound[0]",
-                                        Texts.bracketed(Text.translatable(keyOverrideBlock.getBoundKeyTranslationKey())
-                                                .styled(style -> style.withBold(true).withColor(Formatting.WHITE))))
-                                .styled(style -> style.withColor(Formatting.GRAY)).asOrderedText());
-                        textList.add(Text.translatable("fasttrading.tooltip.unblock_hint.unbound[1]")
-                                .styled(style -> style.withColor(Formatting.GRAY)).asOrderedText());
+                        textList.add(Component.translatable("fasttrading.tooltip.unblock_hint.unbound[0]",
+                                        ComponentUtils.wrapInSquareBrackets(Component.translatable(keyOverrideBlock.saveString())
+                                                .withStyle(style -> style.withBold(true).withColor(ChatFormatting.WHITE))))
+                                .withStyle(style -> style.withColor(ChatFormatting.GRAY)).getVisualOrderText());
+                        textList.add(Component.translatable("fasttrading.tooltip.unblock_hint.unbound[1]")
+                                .withStyle(style -> style.withColor(ChatFormatting.GRAY)).getVisualOrderText());
                     } else {
-                        textList.add(Text.translatable("fasttrading.tooltip.unblock_hint",
-                                        Texts.bracketed(Text.translatable(keyOverrideBlock.getBoundKeyTranslationKey())
-                                                .styled(style -> style.withBold(true).withColor(Formatting.WHITE))))
-                                .styled(style -> style.withColor(Formatting.GRAY)).asOrderedText());
+                        textList.add(Component.translatable("fasttrading.tooltip.unblock_hint",
+                                        ComponentUtils.wrapInSquareBrackets(Component.translatable(keyOverrideBlock.saveString())
+                                                .withStyle(style -> style.withBold(true).withColor(ChatFormatting.WHITE))))
+                                .withStyle(style -> style.withColor(ChatFormatting.GRAY)).getVisualOrderText());
                     }
                 } else {
-                    textList.add(Text.translatable("fasttrading.tooltip.can_perform").styled(
-                            style -> style.withFormatting(Formatting.BOLD, Formatting.GREEN)
-                    ).asOrderedText());
+                    textList.add(Component.translatable("fasttrading.tooltip.can_perform").withStyle(
+                            style -> style.applyFormats(ChatFormatting.BOLD, ChatFormatting.GREEN)
+                    ).getVisualOrderText());
                     if (isBlocked) {
-                        textList.add(Text.translatable("fasttrading.tooltip.can_perform.unblock_hint")
-                                .styled(style -> style.withItalic(true).withColor(Formatting.GRAY)).asOrderedText());
+                        textList.add(Component.translatable("fasttrading.tooltip.can_perform.unblock_hint")
+                                .withStyle(style -> style.withItalic(true).withColor(ChatFormatting.GRAY)).getVisualOrderText());
                     }
                 }
             } else {
-                textList.add(Text.translatable("fasttrading.tooltip.cannot_perform").styled(
-                        style -> style.withFormatting(Formatting.BOLD, Formatting.RED)
-                ).asOrderedText());
+                textList.add(Component.translatable("fasttrading.tooltip.cannot_perform").withStyle(
+                        style -> style.applyFormats(ChatFormatting.BOLD, ChatFormatting.RED)
+                ).getVisualOrderText());
                 textList.add(
-                        Text.translatable("fasttrading.tooltip." + state.name().toLowerCase(Locale.ROOT)).styled(
-                                style -> style.withFormatting(Formatting.ITALIC, Formatting.GRAY)
-                        ).asOrderedText());
+                        Component.translatable("fasttrading.tooltip." + state.name().toLowerCase(Locale.ROOT)).withStyle(
+                                style -> style.applyFormats(ChatFormatting.ITALIC, ChatFormatting.GRAY)
+                        ).getVisualOrderText());
             }
-            textList.add(Text.empty().asOrderedText());
+            textList.add(Component.empty().getVisualOrderText());
             appendTradeDescription(hooks.fasttrading$getCurrentTradeOffer(), textList);
         }
-        var tt = Tooltip.of(null);
-        tt.lines = textList;
-        tt.language = Language.getInstance();
+        var tt = Tooltip.create(null);
+        tt.cachedTooltip = textList;
+        tt.splitWithLanguage = Language.getInstance();
         this.setTooltip(tt);
     }
 
-    private void appendTradeDescription(TradeOffer offer, ArrayList<OrderedText> destList) {
+    private void appendTradeDescription(MerchantOffer offer, ArrayList<FormattedCharSequence> destList) {
         if (offer == null)
             return;
-        ItemStack originalFirstBuyItem = offer.getOriginalFirstBuyItem();
-        ItemStack adjustedFirstBuyItem = offer.getDisplayedFirstBuyItem();
-        ItemStack secondBuyItem = offer.getDisplayedSecondBuyItem();
-        ItemStack sellItem = offer.getSellItem();
-        destList.add(Text.translatable("fasttrading.tooltip.current_trade.is")
-                .styled(style -> style.withColor(Formatting.GRAY)).asOrderedText());
+        ItemStack originalFirstBuyItem = offer.getBaseCostA();
+        ItemStack adjustedFirstBuyItem = offer.getCostA();
+        ItemStack secondBuyItem = offer.getCostB();
+        ItemStack sellItem = offer.getResult();
+        destList.add(Component.translatable("fasttrading.tooltip.current_trade.is")
+                .withStyle(style -> style.withColor(ChatFormatting.GRAY)).getVisualOrderText());
         destList.add(createItemStackDescription(originalFirstBuyItem, adjustedFirstBuyItem)
-                .fillStyle(STYLE_GRAY).asOrderedText());
+                .withStyle(STYLE_GRAY).getVisualOrderText());
         if (!secondBuyItem.isEmpty())
-            destList.add(Text.translatable("fasttrading.tooltip.current_trade.and",
+            destList.add(Component.translatable("fasttrading.tooltip.current_trade.and",
                             createItemStackDescription(secondBuyItem))
-                    .fillStyle(STYLE_GRAY).asOrderedText());
-        destList.add(Text.translatable("fasttrading.tooltip.current_trade.for",
+                    .withStyle(STYLE_GRAY).getVisualOrderText());
+        destList.add(Component.translatable("fasttrading.tooltip.current_trade.for",
                         createItemStackDescription(sellItem))
-                .fillStyle(STYLE_GRAY).asOrderedText());
+                .withStyle(STYLE_GRAY).getVisualOrderText());
     }
 
-    private MutableText createItemStackDescription(ItemStack stack, ItemStack adjustedStack) {
+    private MutableComponent createItemStackDescription(ItemStack stack, ItemStack adjustedStack) {
         if (stack.getCount() == adjustedStack.getCount())
             return createItemStackDescription(stack);
         else {
             return getItemStackName(stack)
-                    .append(Text.literal(" "))
-                    .append(Text.literal("x" + stack.getCount())
-                            .styled(style -> style.withFormatting(Formatting.STRIKETHROUGH, Formatting.RED)))
-                    .append(Text.literal(" x" + adjustedStack.getCount())
-                            .styled(style -> style.withFormatting(Formatting.BOLD, Formatting.GREEN)));
+                    .append(Component.literal(" "))
+                    .append(Component.literal("x" + stack.getCount())
+                            .withStyle(style -> style.applyFormats(ChatFormatting.STRIKETHROUGH, ChatFormatting.RED)))
+                    .append(Component.literal(" x" + adjustedStack.getCount())
+                            .withStyle(style -> style.applyFormats(ChatFormatting.BOLD, ChatFormatting.GREEN)));
         }
     }
 
-    private MutableText createItemStackDescription(ItemStack stack) {
+    private MutableComponent createItemStackDescription(ItemStack stack) {
         return getItemStackName(stack)
-                .append(Text.literal(" x" + stack.getCount()));
+                .append(Component.literal(" x" + stack.getCount()));
     }
 
-    private MutableText getItemStackName(ItemStack stack) {
-        return Texts.bracketed(Text.literal("").append(stack.getName()).styled(style -> style.withFormatting(stack.getRarity().getFormatting())));
+    private MutableComponent getItemStackName(ItemStack stack) {
+        return ComponentUtils.wrapInSquareBrackets(Component.literal("").append(stack.getHoverName()).withStyle(style -> style.applyFormat(stack.getRarity().color())));
     }
 
     public enum Phase {

@@ -1,11 +1,11 @@
 package io.bendy1234.fasttrading.duck;
 
-import net.minecraft.village.TradeOffer;
+import net.minecraft.world.item.trading.MerchantOffer;
 
 public interface MerchantScreenHooks {
     State fasttrading$computeState();
 
-    TradeOffer fasttrading$getCurrentTradeOffer();
+    MerchantOffer fasttrading$getCurrentTradeOffer();
 
     boolean fasttrading$isCurrentTradeOfferBlocked();
 
